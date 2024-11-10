@@ -1,40 +1,47 @@
-import pandas as pd
-from pathlib import Path
+import csv
 
-# Define la ruta base del proyecto
-project_root = Path(__file__).resolve().parent.parent  # Cambia la profundidad según tu estructura de carpetas
+# Función para dividir el texto de una columna en 8 partes
+def split_into_8_parts(review_text):
+    parts = review_text.split(',')
+    final_parts = []
+    temp = []
 
-# Define la ruta del archivo de entrada y salida
-input_path = project_root / 'data' / 'review_table_raw.csv'
-output_path = project_root / 'data' / 'cleaned' / 'review_table.csv'
+    # Procesar cada parte para agruparlas hasta obtener 8 elementos finales
+    for part in parts:
+        temp.append(part.strip())  # Agregar a un temporal
+        
+        # Si llegamos a tener 7 elementos en final_parts o si es el último elemento, unimos el resto
+        if len(final_parts) < 7:
+            final_parts.append(', '.join(temp))
+            temp = []
+        elif len(final_parts) == 7:  # Para el último grupo, unimos todo lo que quede en temp
+            final_parts.append(', '.join(temp + parts[parts.index(part)+1:]))
+            break
+    
+    # Retornar las 8 partes como una lista
+    return final_parts
 
-# Imprime las rutas para verificar
-print("\n\n\n\n Ruta de entrada:", input_path,"\n\n\n\n")
-print("\n\n\n\n Ruta de salida:", output_path,"\n\n\n\n")
-
-# Cargar el archivo CSV
-df = pd.read_csv(input_path, encoding='latin1')
-
-# Crear una lista para almacenar los nuevos datos
-data = []
-
-# Iterar sobre cada fila del DataFrame
-for _, row in df.iterrows():
-    product_id = row['product_id']
-    # Iterar sobre los review_id, review_title y review_content
-    for i in range(1, 9):
-        user_id = row.get(f"user_id.{i}",None)
-        review_id = row.get(f'review_id.{i}', None)
-        review_title = row.get(f'review_title.{i}', None)
-        review_content = row.get(f'review_content.{i}', None)
-        if pd.notna(review_id) and pd.notna(review_title) and pd.notna(review_content) and pd.notna(user_id):
-            data.append([product_id, review_id,user_id, review_title, review_content])
-
-# Crear un nuevo DataFrame con los datos combinados
-result_df = pd.DataFrame(data, columns=['product_id', 'review_id',"user_id", 'review_title', 'review_content'])
-
-# Crear la carpeta de salida si no existe
-output_path.parent.mkdir(parents=True, exist_ok=True)
-
-# Guardar el resultado en un nuevo archivo CSV
-result_df.to_csv(output_path, index=False)
+# Leer el archivo CSV y procesar cada fila
+with open('./data/review_table_raw.csv', 'r', newline='', encoding='latin1') as csvfile:
+    reader = csv.DictReader(csvfile)
+    
+    # Preparar encabezados para el nuevo archivo, incluyendo las 8 partes de cada columna
+    fieldnames = list(reader.fieldnames) + [f'review_title_part_{i}' for i in range(1, 9)] + [f'review_content_part_{i}' for i in range(1, 9)]
+    
+    # Crear el archivo CSV de salida
+    with open('./data/cleaned/review_table_processed.csv', 'w', newline='', encoding='latin1') as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for row in reader:
+            # Dividir 'review_title' y 'review_content' en 8 partes cada uno
+            title_parts = split_into_8_parts(row['review_title'])
+            content_parts = split_into_8_parts(row['review_content'])
+            
+            # Agregar las partes a la fila original
+            for i in range(8):
+                row[f'review_title_part_{i+1}'] = title_parts[i] if i < len(title_parts) else ''
+                row[f'review_content_part_{i+1}'] = content_parts[i] if i < len(content_parts) else ''
+            
+            # Escribir la fila procesada en el archivo de salida
+            writer.writerow(row)

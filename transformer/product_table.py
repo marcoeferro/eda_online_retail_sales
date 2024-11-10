@@ -6,7 +6,7 @@ project_root = Path(__file__).resolve().parent.parent  # Cambia la profundidad s
 
 # Define la ruta del archivo de entrada y salida
 input_path = project_root / 'data' / 'product_table_raw.csv'
-output_path = project_root / 'data' / 'cleaned' / 'product_table.csv'
+output_path = project_root / 'data' / 'cleaned' / 'product_table_processed.csv'
 
 # Imprime las rutas para verificar
 print("\n\n\n\n Ruta de entrada:", input_path,"\n\n\n\n")
